@@ -1,24 +1,22 @@
 package cn.kafei;
 
-import java.util.HashMap;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class SilentMenuState {
 	private static final long NANOS_PER_TICK = 50_000_000L;
 	private static final int DEFAULT_SUPPRESSION_TICKS = 10;
 	private static final ThreadLocal<Boolean> OPENING_SILENTLY = ThreadLocal.withInitial(() -> false);
 	private static final ThreadLocal<Integer> SUPPRESS_CONTAINER_SOUNDS = ThreadLocal.withInitial(() -> 0);
-	private static final Set<AbstractContainerMenu> SILENT_MENUS = Collections.newSetFromMap(new WeakHashMap<>());
-	private static final Map<SuppressionKey, Long> SUPPRESSED_CONTAINER_POSITIONS = new HashMap<>();
+	private static final Set<AbstractContainerMenu> SILENT_MENUS = ConcurrentHashMap.newKeySet();
+	private static final Map<SuppressionKey, Long> SUPPRESSED_CONTAINER_POSITIONS = new ConcurrentHashMap<>();
 
 	private SilentMenuState() {
 	}
@@ -64,10 +62,8 @@ public final class SilentMenuState {
 		long expiresAt = System.nanoTime() + Math.max(1, ticks) * NANOS_PER_TICK;
 		ResourceKey<Level> dimension = level.dimension();
 		BlockPos immutablePos = pos.immutable();
-		synchronized (SUPPRESSED_CONTAINER_POSITIONS) {
-			cleanupExpiredSuppressions(System.nanoTime());
-			SUPPRESSED_CONTAINER_POSITIONS.put(new SuppressionKey(dimension, immutablePos), expiresAt);
-		}
+		cleanupExpiredSuppressions(System.nanoTime());
+		SUPPRESSED_CONTAINER_POSITIONS.put(new SuppressionKey(dimension, immutablePos), expiresAt);
 	}
 
 	public static boolean shouldMuteContainerEffects(Level level, BlockPos pos) {
@@ -88,11 +84,9 @@ public final class SilentMenuState {
 		}
 
 		long now = System.nanoTime();
-		synchronized (SUPPRESSED_CONTAINER_POSITIONS) {
-			cleanupExpiredSuppressions(now);
-			Long expiresAt = SUPPRESSED_CONTAINER_POSITIONS.get(new SuppressionKey(dimension, pos));
-			return expiresAt != null && expiresAt >= now;
-		}
+		cleanupExpiredSuppressions(now);
+		Long expiresAt = SUPPRESSED_CONTAINER_POSITIONS.get(new SuppressionKey(dimension, pos));
+		return expiresAt != null && expiresAt >= now;
 	}
 
 	public static void markSilentMenu(AbstractContainerMenu menu) {

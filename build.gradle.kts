@@ -12,7 +12,7 @@ subprojects {
 	val minecraftSuffix = rootProject.property("mod_version_minecraft_suffix").toString()
 	version = when (project.name) {
 		"fabric" -> "${baseModVersion}+fabric${minecraftSuffix}"
-		"neoforge" -> "${baseModVersion}+neoforge${minecraftSuffix}"
+		"forge" -> "${baseModVersion}+forge${minecraftSuffix}"
 		else -> baseModVersion
 	}
 	group = rootProject.property("maven_group").toString()
@@ -26,10 +26,27 @@ subprojects {
 		maven {
 			name = "Fabric"
 			url = uri("https://maven.fabricmc.net/")
+			content {
+				includeGroupByRegex("net\\.fabricmc(\\..*)?")
+				includeGroup("fabric-loom")
+			}
 		}
 		maven {
-			name = "NeoForge"
-			url = uri("https://maven.neoforged.net/releases")
+			name = "Sponge"
+			url = uri("https://repo.spongepowered.org/repository/maven-public/")
+			content {
+				includeGroupByRegex("org\\.spongepowered(\\..*)?")
+			}
+		}
+		maven {
+			name = "MinecraftForge"
+			url = uri("https://maven.minecraftforge.net/")
+			content {
+				includeGroupByRegex("net\\.minecraftforge(\\..*)?")
+				includeGroupByRegex("cpw\\.mods(\\..*)?")
+				includeGroup("de.oceanlabs.mcp")
+				includeGroup("net.minecraft")
+			}
 		}
 	}
 

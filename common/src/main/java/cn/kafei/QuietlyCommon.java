@@ -21,12 +21,14 @@ import net.minecraft.world.level.block.EnderChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.gameevent.GameEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class QuietlyCommon {
 	public static final String MOD_ID = "quietly";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+	private static final double DEFAULT_BLOCK_INTERACTION_RANGE = 4.5D;
 	private static final InteractionResult INTERACTION_RESULT_SUCCESS = resolveInteractionResult("SUCCESS", 0, "field_5812", "c");
 
 	private QuietlyCommon() {
@@ -35,7 +37,7 @@ public final class QuietlyCommon {
 	public static void initialize(Path configDirectory) {
 		QuietlyLocalization.initialize();
 		QuietlyConfig.initialize(configDirectory);
-		LOGGER.info("Quietly common initialized for Minecraft 1.21.1~1.21.10");
+		LOGGER.info("Quietly common initialized for Minecraft 1.20.1");
 		LOGGER.info("Quietly server language: {}", QuietlyConfig.language());
 	}
 
@@ -75,6 +77,25 @@ public final class QuietlyCommon {
 		return null;
 	}
 
+	public static double blockInteractionRange(ServerPlayer player) {
+		if (player == null) {
+			return DEFAULT_BLOCK_INTERACTION_RANGE;
+		}
+
+		for (String methodName : List.of("blockInteractionRange", "method_55754")) {
+			try {
+				Method method = player.getClass().getMethod(methodName);
+				Object value = method.invoke(player);
+				if (value instanceof Number number) {
+					return number.doubleValue();
+				}
+			} catch (ReflectiveOperationException | RuntimeException ignored) {
+			}
+		}
+
+		return DEFAULT_BLOCK_INTERACTION_RANGE;
+	}
+
 	public static BlockState setBooleanProperty(BlockState state, String propertyName, boolean value) {
 		for (Property<?> property : state.getProperties()) {
 			if (property instanceof BooleanProperty booleanProperty && propertyName.equals(property.getName())) {
@@ -98,7 +119,7 @@ public final class QuietlyCommon {
 			return false;
 		}
 
-		String soundId = soundHolder.getRegisteredName();
+		String soundId = resolveHolderId(soundHolder);
 		if (soundId == null) {
 			try {
 				soundId = resolveSoundEventId(soundHolder.value());
@@ -115,9 +136,26 @@ public final class QuietlyCommon {
 			return false;
 		}
 
-		String gameEventId = gameEventHolder.getRegisteredName();
+		String gameEventId = resolveHolderId(gameEventHolder);
 		return "minecraft:container_open".equals(gameEventId)
 			|| "minecraft:container_close".equals(gameEventId);
+	}
+
+	// isSilentContainerGameEvent：识别 1.20.1 直接传入的容器开关声感事件。
+	public static boolean isSilentContainerGameEvent(GameEvent gameEvent) {
+		if (gameEvent == null) {
+			return false;
+		}
+
+		if (gameEvent == GameEvent.CONTAINER_OPEN || gameEvent == GameEvent.CONTAINER_CLOSE) {
+			return true;
+		}
+
+		String gameEventId = resolveGameEventId(gameEvent);
+		return "minecraft:container_open".equals(gameEventId)
+			|| "minecraft:container_close".equals(gameEventId)
+			|| "container_open".equals(gameEventId)
+			|| "container_close".equals(gameEventId);
 	}
 
 	public static <E extends Enum<E>> E enumValue(Class<E> enumClass, String valueName) {
@@ -172,6 +210,34 @@ public final class QuietlyCommon {
 		}
 
 		return null;
+	}
+
+	// resolveHolderId：从 1.20.1 Holder 资源键解析注册名。
+	private static String resolveHolderId(Holder<?> holder) {
+		try {
+			return holder.unwrapKey()
+				.map(resourceKey -> resourceKey.location().toString())
+				.orElse(null);
+		} catch (RuntimeException ignored) {
+			return null;
+		}
+	}
+
+	// resolveGameEventId：解析 1.20.1 GameEvent 注册名，用于静默过滤兜底判断。
+	private static String resolveGameEventId(GameEvent gameEvent) {
+		try {
+			ResourceLocation key = BuiltInRegistries.GAME_EVENT.getKey(gameEvent);
+			if (key != null) {
+				return key.toString();
+			}
+		} catch (RuntimeException ignored) {
+		}
+
+		try {
+			return gameEvent.getName();
+		} catch (RuntimeException ignored) {
+			return null;
+		}
 	}
 
 	private static InteractionResult resolveInteractionResult(String enumName, int nonEnumFieldIndex, String... fallbackFieldNames) {

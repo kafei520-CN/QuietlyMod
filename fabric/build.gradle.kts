@@ -1,7 +1,7 @@
 import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
-	id("fabric-loom") version "1.16-SNAPSHOT"
+	id("fabric-loom")
 }
 
 dependencies {
@@ -9,10 +9,7 @@ dependencies {
 	mappings(loom.officialMojangMappings())
 	modImplementation("net.fabricmc:fabric-loader:${rootProject.property("loader_version")}")
 	modImplementation("net.fabricmc.fabric-api:fabric-api:${rootProject.property("fabric_api_version")}")
-	compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
-	annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")
 	compileOnly("net.fabricmc:sponge-mixin:0.15.3+mixin.0.8.7")
-	implementation(project.project(":common").sourceSets.getByName("main").output)
 }
 
 loom {

@@ -1,6 +1,6 @@
 # Quietly
 
-`Quietly` 是一个面向 `Minecraft 1.21.1 ~ 1.21.10` 的服务端静默开箱模组，支持 `Fabric` 和 `NeoForge`。
+`Quietly` 是一个面向 `Minecraft 1.20.1` 的服务端静默开箱模组，支持 `Fabric` 和 `Forge`。
 
 它的目标很简单：
 
@@ -49,17 +49,17 @@
 
 ## 兼容范围
 
-- Minecraft: `1.21.1 ~ 1.21.10`
+- Minecraft: `1.20.1`
 - Fabric Loader: `0.19.2`
-- Fabric API: `0.116.12+1.21.1`
-- Java: `21`
-- `1.21.11` 不在当前支持范围内
+- Fabric API: `0.92.9+1.20.1`
+- Forge: `47.4.20`
+- Java: `17`
 
 ## 项目结构
 
 - `common/`: 公共逻辑、静音状态机、通用 Mixin
 - `fabric/`: Fabric 入口与平台资源
-- `neoforge/`: NeoForge 入口与平台资源
+- `forge/`: Forge 入口与平台资源
 
 ## 构建
 
@@ -69,17 +69,17 @@
 ./gradlew.bat :fabric:build
 ```
 
-构建 NeoForge：
+构建 Forge：
 
 ```bash
-./gradlew.bat :neoforge:build
+./gradlew.bat :forge:build
 ```
 
-构建完成后可在对应平台的 `build/libs/` 目录查看产物。
+构建完成后可在根目录的 `build/libs_fabric/` 和 `build/libs_forge/` 目录查看产物。
 
 ## 说明
 
-- 当前实现已经收口到 `1.21.1 ~ 1.21.10`
+- 当前实现已经收口到 `1.20.1`
 - 排查阶段使用的临时追踪代码已移除
 - 现在保留的是正式静音链路与动画逻辑
 

@@ -2,8 +2,6 @@ package cn.kafei.mixin;
 
 import cn.kafei.SilentOpenManager;
 import cn.kafei.SilentMenuState;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -12,11 +10,12 @@ import net.minecraft.world.inventory.ShulkerBoxMenu;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ShulkerBoxMenu.class)
 public abstract class ShulkerBoxMenuMixin {
-	@WrapOperation(
+	@Redirect(
 		method = "<init>(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/Container;)V",
 		at = @At(
 			value = "INVOKE",
@@ -24,9 +23,9 @@ public abstract class ShulkerBoxMenuMixin {
 		),
 		require = 0
 	)
-	private void quietly$skipStartOpen(Container container, Player opener, Operation<Void> original) {
+	private void quietly$skipStartOpen(Container container, Player opener) {
 		if (!SilentMenuState.isOpeningSilently()) {
-			original.call(container, opener);
+			container.startOpen(opener);
 		}
 	}
 
@@ -40,7 +39,7 @@ public abstract class ShulkerBoxMenuMixin {
 		}
 	}
 
-	@WrapOperation(
+	@Redirect(
 		method = "removed",
 		at = @At(
 			value = "INVOKE",
@@ -48,9 +47,9 @@ public abstract class ShulkerBoxMenuMixin {
 		),
 		require = 0
 	)
-	private void quietly$skipStopOpen(Container container, Player opener, Operation<Void> original) {
+	private void quietly$skipStopOpen(Container container, Player opener) {
 		if (!SilentMenuState.isSilentMenu((AbstractContainerMenu) (Object) this)) {
-			original.call(container, opener);
+			container.stopOpen(opener);
 		}
 	}
 

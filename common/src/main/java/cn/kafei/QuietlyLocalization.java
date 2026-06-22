@@ -7,8 +7,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -18,7 +18,7 @@ public final class QuietlyLocalization {
 	private static final String DEFAULT_LANGUAGE = "zh_cn";
 	private static final String FALLBACK_LANGUAGE = "en_us";
 	private static final String[] SUPPORTED_LANGUAGES = { DEFAULT_LANGUAGE, FALLBACK_LANGUAGE };
-	private static final Map<String, Map<String, String>> LANGUAGES = new HashMap<>();
+	private static final Map<String, Map<String, String>> LANGUAGES = new ConcurrentHashMap<>();
 
 	private QuietlyLocalization() {
 	}

@@ -24,22 +24,21 @@ import net.minecraft.world.level.block.entity.EnderChestBlockEntity;
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class SilentOpenManager {
 	private static final int BASE_OPEN_TICKS = 12;
 	private static final int TICKS_PER_ITEM_KIND = 4;
 	private static final long DOUBLE_CLICK_WINDOW_MS = 350L;
-	private static final Map<UUID, ActiveSilentOpen> ACTIVE_OPENS = new HashMap<>();
-	private static final Map<UUID, PendingSilentClick> PENDING_CLICKS = new HashMap<>();
-	private static final Map<AbstractContainerMenu, AnimationTarget> MENU_ANIMATIONS = new HashMap<>();
-	private static final Map<AnimationKey, Integer> ANIMATION_REF_COUNTS = new HashMap<>();
+	private static final ConcurrentHashMap<UUID, ActiveSilentOpen> ACTIVE_OPENS = new ConcurrentHashMap<>();
+	private static final ConcurrentHashMap<UUID, PendingSilentClick> PENDING_CLICKS = new ConcurrentHashMap<>();
+	private static final ConcurrentHashMap<AbstractContainerMenu, AnimationTarget> MENU_ANIMATIONS = new ConcurrentHashMap<>();
+	private static final ConcurrentHashMap<AnimationKey, AtomicInteger> ANIMATION_REF_COUNTS = new ConcurrentHashMap<>();
 
 	private SilentOpenManager() {
 	}
@@ -96,14 +95,12 @@ public final class SilentOpenManager {
 		long now = System.currentTimeMillis();
 		PENDING_CLICKS.entrySet().removeIf(entry -> entry.getValue().isExpired(now));
 
-		Iterator<Map.Entry<UUID, ActiveSilentOpen>> iterator = ACTIVE_OPENS.entrySet().iterator();
-		while (iterator.hasNext()) {
-			Map.Entry<UUID, ActiveSilentOpen> entry = iterator.next();
-			if (!entry.getValue().tick()) {
-				entry.getValue().close();
-				iterator.remove();
+		ACTIVE_OPENS.forEach((playerId, activeOpen) -> {
+			if (!activeOpen.tick()) {
+				activeOpen.close();
+				ACTIVE_OPENS.remove(playerId, activeOpen);
 			}
-		}
+		});
 	}
 
 	private static void cancel(UUID playerId) {
@@ -188,7 +185,7 @@ public final class SilentOpenManager {
 		if (player.containerMenu != player.inventoryMenu) {
 			return false;
 		}
-		double reach = player.blockInteractionRange();
+		double reach = QuietlyCommon.blockInteractionRange(player);
 		double maxDistanceSqr = reach * reach;
 		return player.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) <= maxDistanceSqr;
 	}
@@ -212,8 +209,7 @@ public final class SilentOpenManager {
 	private static void registerOpenAnimation(AbstractContainerMenu menu, AnimationTarget animationTarget) {
 		MENU_ANIMATIONS.put(menu, animationTarget);
 		AnimationKey key = animationTarget.key();
-		int newCount = ANIMATION_REF_COUNTS.getOrDefault(key, 0) + 1;
-		ANIMATION_REF_COUNTS.put(key, newCount);
+		int newCount = ANIMATION_REF_COUNTS.computeIfAbsent(key, ignored -> new AtomicInteger()).incrementAndGet();
 		if (newCount == 1) {
 			animationTarget.apply(true);
 		}
@@ -226,18 +222,16 @@ public final class SilentOpenManager {
 		}
 
 		AnimationKey key = animationTarget.key();
-		Integer currentCount = ANIMATION_REF_COUNTS.get(key);
+		AtomicInteger currentCount = ANIMATION_REF_COUNTS.get(key);
 		if (currentCount == null) {
 			return;
 		}
 
-		if (currentCount <= 1) {
-			ANIMATION_REF_COUNTS.remove(key);
+		int remainingCount = currentCount.decrementAndGet();
+		if (remainingCount <= 0) {
+			ANIMATION_REF_COUNTS.remove(key, currentCount);
 			animationTarget.apply(false);
-			return;
 		}
-
-		ANIMATION_REF_COUNTS.put(key, currentCount - 1);
 	}
 
 	private record OpenTarget(MenuProvider menuProvider, int itemKinds, AnimationTarget animationTarget) {
