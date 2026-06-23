@@ -62,19 +62,7 @@ public final class QuietlyCommon {
 		if (player == null) {
 			return null;
 		}
-
-		for (String methodName : List.of("serverLevel", "level", "method_37908", "method_7325", "fY")) {
-			try {
-				Method method = player.getClass().getMethod(methodName);
-				Object value = method.invoke(player);
-				if (value instanceof ServerLevel serverLevel) {
-					return serverLevel;
-				}
-			} catch (ReflectiveOperationException | RuntimeException ignored) {
-			}
-		}
-
-		return null;
+		return player.serverLevel();
 	}
 
 	public static double blockInteractionRange(ServerPlayer player) {
